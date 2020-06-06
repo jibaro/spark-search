@@ -16,69 +16,37 @@
 package org.apache.spark.search.sql
 
 
-import java.util.Locale
-import java.util.regex.{MatchResult, Pattern}
-
 import org.apache.commons.lang3.StringEscapeUtils
-import org.apache.spark.sql.catalyst.expressions.{Expression, StringRegexExpression}
-import org.apache.spark.sql.catalyst.expressions.codegen._
 import org.apache.spark.sql.catalyst.expressions.codegen.Block._
-import org.apache.spark.sql.catalyst.util.{GenericArrayData, StringUtils}
+import org.apache.spark.sql.catalyst.expressions.codegen._
+import org.apache.spark.sql.catalyst.expressions.{BinaryExpression, Expression, ImplicitCastInputTypes, NullIntolerant}
+import org.apache.spark.sql.catalyst.util.StringUtils
 import org.apache.spark.sql.types._
 import org.apache.spark.unsafe.types.UTF8String
 
 /**
- *
- *
  * @author Pierrick HYMBERT
  */
-case class MatchesExpression(left: Expression, right: Expression) extends StringRegexExpression {
+case class MatchesExpression(left: Expression, right: Expression, includeScore: Boolean)
+  extends BinaryExpression
+    with ImplicitCastInputTypes
+    with NullIntolerant{
 
-  override def escape(v: String): String = StringUtils.escapeLikeRegex(v)
-
-  override def matches(regex: Pattern, str: String): Boolean = regex.matcher(str).matches()
-
-  override def toString: String = s"$left SEARCH $right"
+  override def toString: String = s"$left MATCHES $right"
 
   override protected def doGenCode(ctx: CodegenContext, ev: ExprCode): ExprCode = {
-    val patternClass = classOf[Pattern].getName
-    val escapeFunc = StringUtils.getClass.getName.stripSuffix("$") + ".escapeLikeRegex"
-
-    if (right.foldable) {
-      val rVal = right.eval()
-      if (rVal != null) {
-        val regexStr =
-          StringEscapeUtils.escapeJava(escape(rVal.asInstanceOf[UTF8String].toString()))
-        val pattern = ctx.addMutableState(patternClass, "patternLike",
-          v => s"""$v = $patternClass.compile("$regexStr");""")
-
-        // We don't use nullSafeCodeGen here because we don't want to re-evaluate right again.
-        val eval = left.genCode(ctx)
-        ev.copy(code = code"""
-          ${eval.code}
-          boolean ${ev.isNull} = ${eval.isNull};
-          ${CodeGenerator.javaType(dataType)} ${ev.value} = ${CodeGenerator.defaultValue(dataType)};
-          if (!${ev.isNull}) {
-            ${ev.value} = $pattern.matcher(${eval.value}.toString()).matches();
-          }
-        """)
-      } else {
-        ev.copy(code = code"""
-          boolean ${ev.isNull} = true;
-          ${CodeGenerator.javaType(dataType)} ${ev.value} = ${CodeGenerator.defaultValue(dataType)};
-        """)
-      }
-    } else {
-      val pattern = ctx.freshName("pattern")
+    // FIXME generate code to call query
+    nullSafeCodeGen(ctx, ev, (eval1, eval2) => {
       val rightStr = ctx.freshName("rightStr")
-      nullSafeCodeGen(ctx, ev, (eval1, eval2) => {
-        s"""
-          String $rightStr = $eval2.toString();
-          $patternClass $pattern = $patternClass.compile($escapeFunc($rightStr));
-          ${ev.value} = $pattern.matcher($eval1.toString()).matches();
-        """
-      })
-    }
+      s"""
+         | String $rightStr = $eval2.toString();
+         | ${ev.value} = true; // $eval1.toString().equals($rightStr); FIXME
+        """.stripMargin
+    })
   }
+
+  override def dataType: DataType = BooleanType
+
+  override def inputTypes: Seq[DataType] = Seq(StringType, StringType)
 }
 

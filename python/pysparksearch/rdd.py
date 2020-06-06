@@ -15,8 +15,8 @@
 
 __all__ = ["SearchRDD"]
 
-class SearchRDD(object):
 
+class SearchRDD(object):
     """
     A Spark RDD with search features
     """

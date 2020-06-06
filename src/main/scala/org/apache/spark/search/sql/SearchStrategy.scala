@@ -8,8 +8,15 @@ import org.apache.spark.sql.execution.{SparkPlan, SparkStrategy}
  *
  * @author Pierrick HYMBERT
  */
-class SearchStrategy() extends SparkStrategy {
+object SearchStrategy extends SparkStrategy {
+
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
-    plan
+    plan match {
+      case p: SearchJoinLogicalPlan =>
+        SearchJoinPhysicalPlan(planLater(p.left), planLater(p.right), p.conditions) :: Nil
+      case p: SearchRDDLogicalPlan =>
+        SearchRDDPhysicalPlan(planLater(p.child)) :: Nil
+      case _ => Seq.empty
+    }
   }
 }

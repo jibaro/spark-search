@@ -30,6 +30,7 @@ import types
 from pysparksearch.rdd import SearchRDD
 from pysparksearch.version import __version__
 
+
 def since(version):
     """
     A decorator that annotates a function to append the version of Spark the function was added.
@@ -42,7 +43,9 @@ def since(version):
         indent = ' ' * (min(len(m) for m in indents) if indents else 0)
         f.__doc__ = f.__doc__.rstrip() + "\n\n%s.. versionadded:: %s" % (indent, version)
         return f
+
     return deco
+
 
 __all__ = [
     "SearchRDD",

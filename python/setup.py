@@ -16,11 +16,13 @@
 #  limitations under the License.
 
 from __future__ import print_function
+
 import glob
 import os
 import sys
-from setuptools import setup, find_packages
-from shutil import copyfile, copytree, rmtree
+from shutil import copytree, rmtree
+
+from setuptools import setup
 
 try:
     exec(open('pysparksearchsearch/version.py').read())
@@ -89,6 +91,7 @@ try:
     long_description = "!!!!! missing pandoc do not upload to PyPI !!!!"
     try:
         import pypandoc
+
         long_description = pypandoc.convert('README.md', 'rst')
     except ImportError:
         print("Could not import pypandoc - required to package PySparkSearch", file=sys.stderr)

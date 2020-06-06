@@ -1,2 +1,2 @@
-# Spark Search
+# Spark Search Python API
 

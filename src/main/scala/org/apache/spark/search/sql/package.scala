@@ -37,14 +37,9 @@ package object sql {
   def defaultQueryBuilder[T: ClassTag](implicit enc: Encoder[T]): T => Query = search.defaultQueryBuilder[T]()
 
   /**
-   * Add search feature to dataset.
-   */
-  implicit def datasetWithSearch[T](ds : Dataset[T]): DatasetWithSearch[T] = new DatasetWithSearch[T](ds)
-
-  /**
    * Add search feature to column.
    */
-  implicit def columnWithSearch(col : Column): ColumnWithSearch = new ColumnWithSearch(col)
+  implicit def columnWithSearch(col: Column): ColumnWithSearch = new ColumnWithSearch(col)
 
   /**
    * Allow search record rdd transformation to Row.
