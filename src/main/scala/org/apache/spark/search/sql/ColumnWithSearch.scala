@@ -1,6 +1,5 @@
 package org.apache.spark.search.sql
 
-import org.apache.spark.search.SearchException
 import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{Column, SparkSession}
@@ -13,19 +12,11 @@ class ColumnWithSearch(col: Column) {
   @transient private final val sqlContext = SparkSession.getActiveSession.map(_.sqlContext).orNull
 
   def matches(literal: String): Column = withSearchExpr {
-    MatchesExpression(col.expr, lit(literal).expr, includeScore = false)
+    MatchesExpression(col.expr, lit(literal).expr)
   }
 
-  def matches(col: Column): Column = withSearchExpr {
-    MatchesExpression(col.expr, col.expr, includeScore = false)
-  }
-
-  def score(): Column = withSearchExpr {
-    col.expr match {
-      case MatchesExpression(left, right, _) => MatchesExpression(left, right, includeScore = true)
-      case _ => throw new SearchException(
-        "scoring on a column not supported by spark search is not allowed, call matches first")
-    }
+  def matches(other: Column): Column = withSearchExpr {
+    MatchesExpression(col.expr, other.expr)
   }
 
   /** Creates a column based on the given expression. */

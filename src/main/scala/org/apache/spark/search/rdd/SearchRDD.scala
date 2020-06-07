@@ -146,8 +146,8 @@ private[search] class SearchRDD[T: ClassTag](rdd: RDD[T],
       .repartition(numPartitions)
   }
 
-  override def repartition(numPartitions: Int)(implicit ord: Ordering[T]): RDD[T]
-  = new SearchRDD[T](firstParent.repartition(numPartitions), options)
+  override def repartition(numPartitions: Int)(implicit ord: Ordering[T]): RDD[T] =
+    new SearchRDD[T](firstParent.repartition(numPartitions), options)
 
   private def _partitionReaderSearchList(r: SearchPartitionReader[T],
                                          query: () => Query, topK: Int, minScore: Double): Array[SearchRecord[T]] =

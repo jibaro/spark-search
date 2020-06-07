@@ -5,24 +5,23 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.search.rdd.SearchRDD
 import org.apache.spark.search.{IndexationOptions, ReaderOptions, SearchOptions, _}
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, Expression, Literal}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, Expression, GenericInternalRow, Literal}
 import org.apache.spark.sql.execution._
-import org.apache.spark.sql.types.StringType
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.unsafe.types.UTF8String
 
-case class SearchJoinPhysicalPlan(left: SparkPlan,
-                                  right: SparkPlan,
-                                  conditions: Expression)
-  extends BinaryExecNode {
-  // FIXME support left val retrieving from other rows / support code gen
-  override protected def doExecute(): RDD[InternalRow] = {
 
+case class SearchJoinExec(left: SparkPlan, right: SparkPlan, searchExpression: Expression)
+  extends BinaryExecNode {
+
+
+  override protected def doExecute(): RDD[InternalRow] = {
     val leftRDD = left.execute()
     val searchRDD = right.execute().asInstanceOf[SearchRDD[InternalRow]]
     val opts = searchRDD.options
 
-    val qb = conditions match {
-      case MatchesExpression(left, right, includeScore) => right match {
+    val qb = searchExpression match { // FIXME support AND / OR
+      case MatchesExpression(left, right) => right match {
         case Literal(value, dataType) =>
           dataType match {
             case StringType => left match {
@@ -38,33 +37,30 @@ case class SearchJoinPhysicalPlan(left: SparkPlan,
       case _ => throw new IllegalArgumentException
     }
 
-    val rdd = searchRDD.searchQueryJoin(leftRDD, qb, 1)
-      .filter(_.hits.nonEmpty)
-      .map(m => m.doc)
-
-    rdd.foreach(println)
-
-    rdd
+    searchRDD.searchQueryJoin(leftRDD, qb, 1)
+      .filter(_.hits.nonEmpty) // TODO move this filter at partition level
+      .map(m => InternalRow.fromSeq(m.doc.asInstanceOf[GenericInternalRow].values ++ Seq(m.hits.head.score)))
   }
 
   override def output: Seq[Attribute] = left.output ++ right.output
 }
 
-
-case class SearchRDDPhysicalPlan(child: SparkPlan)
+case class SearchRDDExec(child: SparkPlan, indexedAttributes: Seq[Attribute])
   extends UnaryExecNode {
 
   override protected def doExecute(): RDD[InternalRow] = {
     val inputRDDs = child.asInstanceOf[WholeStageCodegenExec].child.asInstanceOf[CodegenSupport].inputRDDs()
 
     if (inputRDDs.length > 1) {
-      throw new UnsupportedOperationException("multiple RDD not supported")
+      throw new UnsupportedOperationException("multiple RDDs not supported")
     }
 
     val rdd = inputRDDs.head
 
-    // FIXME index only necessaries columns
-    val schema = child.schema
+
+    val schema = StructType(indexedAttributes
+      .filter(_.name != SCORE)
+      .map(a => StructField(a.name, a.dataType, a.nullable)))
 
     val opts = SearchOptions.builder[InternalRow]()
       .read((readOptsBuilder: ReaderOptions.Builder[InternalRow]) => readOptsBuilder.documentConverter(new DocumentRowConverter(schema)))
@@ -74,5 +70,6 @@ case class SearchRDDPhysicalPlan(child: SparkPlan)
     new SearchRDD[InternalRow](rdd, opts)
   }
 
-  override def output: Seq[Attribute] = Seq.empty // FIXME add score here
+  override def output: Seq[Attribute] = indexedAttributes
+    .filter(_.name == SCORE)
 }

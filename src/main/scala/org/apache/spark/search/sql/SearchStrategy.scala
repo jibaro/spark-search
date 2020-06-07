@@ -1,5 +1,6 @@
 package org.apache.spark.search.sql
 
+import org.apache.spark.sql.catalyst.expressions.Expression
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.execution.{SparkPlan, SparkStrategy}
 
@@ -12,11 +13,11 @@ object SearchStrategy extends SparkStrategy {
 
   override def apply(plan: LogicalPlan): Seq[SparkPlan] = {
     plan match {
-      case p: SearchJoinLogicalPlan =>
-        SearchJoinPhysicalPlan(planLater(p.left), planLater(p.right), p.conditions) :: Nil
-      case p: SearchRDDLogicalPlan =>
-        SearchRDDPhysicalPlan(planLater(p.child)) :: Nil
+      case SearchJoin(left, right, searchExpression) => SearchJoinExec(planLater(left), planLater(right), searchExpression):: Nil
+      case p: SearchIndexPlan =>
+        SearchRDDExec(planLater(p.child), p.output) :: Nil
       case _ => Seq.empty
     }
   }
+
 }

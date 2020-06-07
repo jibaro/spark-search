@@ -19,6 +19,9 @@ package org.apache.spark.search
 import org.apache.lucene.search.Query
 import org.apache.spark.search
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.analysis.UnresolvedAttribute
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference}
+import org.apache.spark.sql.types.DoubleType
 
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
@@ -30,6 +33,18 @@ import scala.reflect.runtime.universe.TypeTag
  * @author Pierrick HYMBERT
  */
 package object sql {
+
+  /**
+   * Score column name.
+   */
+  val SCORE: String = "__score__"
+
+  private[sql] val scoreAttribute: Attribute = AttributeReference(SCORE, DoubleType, nullable = false)()
+
+  /**
+   * Score of the hit in the search request.
+   */
+  def score(): Column = new Column(ScoreExpression())
 
   /**
    * Default query builder.

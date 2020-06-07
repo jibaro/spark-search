@@ -1,19 +1,26 @@
 package org.apache.spark.search.sql
 
-import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, Expression, PredicateHelper}
-import org.apache.spark.sql.catalyst.plans.logical.{BinaryNode, LeafNode, LogicalPlan}
+import org.apache.spark.sql.catalyst.expressions.{Attribute, AttributeReference, Expression}
+import org.apache.spark.sql.catalyst.plans.logical.{BinaryNode, LeafNode, LogicalPlan, Statistics}
+import org.apache.spark.sql.types.{DataTypes, DoubleType}
 
-case class SearchJoinLogicalPlan(left: LogicalPlan,
-                                 right: SearchRDDLogicalPlan,
-                                 conditions: Expression)
-  extends BinaryNode with PredicateHelper {
+trait SearchLogicalPlan
 
-  override def output: Seq[Attribute] = left.output
+
+case class SearchJoin(left: LogicalPlan, right: SearchIndexPlan, searchExpression: Expression)
+  extends BinaryNode
+    with SearchLogicalPlan {
+  override def output: Seq[Attribute] = left.output ++ right.output
 }
 
-case class SearchRDDLogicalPlan(child: LogicalPlan)
-  extends LeafNode {
 
-  // FIXME take only indexed fields
-  override def output: Seq[Attribute] = child.schema.map(f => AttributeReference(f.name, f.dataType, f.nullable, f.metadata)())
+case class SearchIndexPlan(child: LogicalPlan, searchExpression: Expression)
+  extends LeafNode
+    with SearchLogicalPlan {
+
+  override def output: Seq[Attribute] = Seq(AttributeReference(SCORE, DoubleType, nullable = false)())
+
+  override def computeStats(): Statistics = Statistics(
+    sizeInBytes = BigInt(Long.MaxValue) // Broadcast forbidden
+  )
 }
