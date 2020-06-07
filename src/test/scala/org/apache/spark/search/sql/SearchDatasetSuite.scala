@@ -14,8 +14,6 @@ class SearchDatasetSuite extends AnyFunSuite with LocalSparkSession {
 
     val ibmCompany = companies.where($"name".matches("ibm"))
 
-    ibmCompany.select($"name").show(1000)
-
-    assertResult(1)(ibmCompany.count)
+    assertResult(1000)(ibmCompany.count)
   }
 }

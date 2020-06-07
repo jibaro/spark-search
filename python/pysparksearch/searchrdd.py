@@ -21,5 +21,15 @@ class SearchRDD(object):
     A Spark RDD with search features
     """
 
-    def __init__(self, jrdd):
-        self._jrdd = jrdd
+    def __init__(self, searchRDD):
+        self._searchRDD = searchRDD
+
+    def count(self, query):
+        return self._searchRDD.count(query)
+
+
+def searchcount(self, query):
+    searchRDD(self.ctx, self).count(query)
+
+def searchRDD(ctx, rdd):
+    return ctx._jvm.org.apache.spark.search.rdd.SearchRDDJava.create(rdd)

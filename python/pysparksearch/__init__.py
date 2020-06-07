@@ -23,11 +23,9 @@ Public classes:
   - :class:`SearchRDD`:
       Main entry point for Spark Search RDD functionality.
 """
+from pyspark import RDD, SparkContext
 
-from functools import wraps
-import types
-
-from pysparksearch.rdd import SearchRDD
+from pysparksearch.searchrdd import SearchRDD, searchcount, searchRDD
 from pysparksearch.version import __version__
 
 
@@ -46,7 +44,10 @@ def since(version):
 
     return deco
 
+# Enhance rdd API
+setattr(RDD, 'searchcount', searchcount)
+setattr(SparkContext, "searchRDD", searchRDD)
 
 __all__ = [
-    "SearchRDD",
+    "SearchRDD", "searchcount",
 ]

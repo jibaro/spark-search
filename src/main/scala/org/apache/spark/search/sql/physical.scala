@@ -27,7 +27,7 @@ case class SearchJoinPhysicalPlan(left: SparkPlan,
           dataType match {
             case StringType => left match {
               case a: AttributeReference =>
-                queryBuilder[InternalRow]((r: InternalRow, lqb: QueryBuilder) =>
+                queryBuilder[InternalRow]((_: InternalRow, lqb: QueryBuilder) =>
                   lqb.createPhraseQuery(a.name, value.asInstanceOf[UTF8String].toString), opts)
               case _ => throw new UnsupportedOperationException
             }
@@ -39,6 +39,7 @@ case class SearchJoinPhysicalPlan(left: SparkPlan,
     }
 
     val rdd = searchRDD.searchQueryJoin(leftRDD, qb, 1)
+      .filter(_.hits.nonEmpty)
       .map(m => m.doc)
 
     rdd.foreach(println)

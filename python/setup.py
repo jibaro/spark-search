@@ -25,7 +25,7 @@ from shutil import copytree, rmtree
 from setuptools import setup
 
 try:
-    exec(open('pysparksearchsearch/version.py').read())
+    exec(open('pysparksearch/version.py').read())
 except IOError:
     print("Failed to load PySparkSearch version file for packaging. You must be in Spark Search's python dir.",
           file=sys.stderr)
@@ -56,10 +56,7 @@ elif len(JARS_PATH) == 0 and not os.path.exists(TEMP_PATH):
     print(incorrect_invocation_message, file=sys.stderr)
     sys.exit(-1)
 
-LICENSES_PATH = os.path.join(SPARK_SEARCH_HOME, "licenses")
-
 JARS_TARGET = os.path.join(TEMP_PATH, "jars")
-LICENSES_TARGET = os.path.join(TEMP_PATH, "licenses")
 
 # Check and see if we are under the spark path in which case we need to build the symlink farm.
 # This is important because we only want to build the symlink farm while under Spark otherwise we
@@ -80,7 +77,6 @@ try:
 
     if in_spark:
         copytree(JARS_PATH, JARS_TARGET)
-        copytree(LICENSES_PATH, LICENSES_TARGET)
     else:
         # If we are not inside of SPARK_SEARCH_HOME verify we have the required symlink farm
         if not os.path.exists(JARS_TARGET):
@@ -92,7 +88,7 @@ try:
     try:
         import pypandoc
 
-        long_description = pypandoc.convert('README.md', 'rst')
+        long_description = pypandoc.convert_file('README.md', 'rst')
     except ImportError:
         print("Could not import pypandoc - required to package PySparkSearch", file=sys.stderr)
     except OSError:
@@ -106,16 +102,13 @@ try:
         author='Spark Search Developers',
         author_email='pierrick.hymbert@gmail.com',
         url='https://github.com/phymbert/spark-search/tree/master/python',
-        packages=['pysparksearch',
-                  'pysparksearch.licenses'],
+        packages=['pysparksearch'],
         include_package_data=True,
         package_dir={
             'pysparksearch.jars': 'deps/jars',
-            'pysparksearch.licenses': 'deps/licenses',
         },
         package_data={
-            'pysparksearch.jars': ['*.jar'],
-            'pysparksearch.licenses': ['*.txt']
+            'pysparksearch.jars': ['*.jar']
         },
         license='http://www.apache.org/licenses/LICENSE-2.0',
         install_requires=['pyspark==2.4.5'],
@@ -136,5 +129,4 @@ finally:
     # packaging.
     if in_spark:
         rmtree(os.path.join(TEMP_PATH, "jars"))
-        rmtree(os.path.join(TEMP_PATH, "licenses"))
         os.rmdir(TEMP_PATH)
